@@ -1,0 +1,30 @@
+---
+title: "Final Project"
+author: "Naren Akurati"
+date: "11/24/2018"
+output: html_document
+---
+
+```{r}
+train <- read.csv("HTrainLast.csv")
+head(train)
+
+train_reduced <- train[, c(2:9, 11:81)]
+summary(train_reduced)
+
+train$affordabilitty
+
+test <- read.csv("HTestLastNoY.csv")
+head(test)
+
+
+logistic_model <- glm(formula = affordabilitty ~ MSSubClass, data = train_reduced, family = binomial(), na.action = na.exclude)
+prediction <- predict(logistic_model, type = "response")
+prediction <- ifelse (prediction > 0.5, "Affordable", "Unaffordable")
+prediction <- as.factor(prediction)
+table(prediction, train$affordabilitty)
+mean(prediction != train$affordabilitty)
+
+prediction
+train$affordabilitty
+```
