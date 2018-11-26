@@ -6,25 +6,38 @@ output: html_document
 ---
 
 ```{r}
+library(dplyr)
+
+#read in the data
 train <- read.csv("HTrainLast.csv")
-head(train)
 
-train_reduced <- train[, c(2:9, 11:81)]
-summary(train_reduced)
+#find out which predictors have the most NAs
+tb1 <- as.data.frame(colSums(is.na(train)))
+tb1 <- setNames(cbind(rownames(tb1), tb1, row.names = NULL), c("predictor", "na_count"))
+tb1 %>% group_by(predictor) %>% arrange(desc(na_count))
 
-train$affordabilitty
+#remove troublesome predictors
+trouble <- c("PoolQC", "MiscFeature", "Alley", "Fence", "FireplaceQu", "LotFrontage")
+train_r <- subset(train, select = -which(names(train) %in% trouble))
 
-test <- read.csv("HTestLastNoY.csv")
-head(test)
+#check NAs again
+tb2 <- as.data.frame(colSums(is.na(train_r)))
+tb2 <- setNames(cbind(rownames(tb2), tb2, row.names = NULL), c("predictor", "na_count"))
+tb2 %>% group_by(predictor) %>% arrange(desc(na_count))
 
+#omit remaining NAs
+train_r_2 <- na.omit(train_r)
+#going from 3500 to 3205 observations
 
-logistic_model <- glm(formula = affordabilitty ~ MSSubClass, data = train_reduced, family = binomial(), na.action = na.exclude)
+#dropping ariables with less than 2 levels
+train_r_3 <- train_r_2[, sapply(train_r_2, function(col) length(unique(col))) > 1]
+#dropped one predictor
+
+#trying logistic regression
+logistic_model <- glm(formula = affordabilitty ~ ., data = train_r_3, family = binomial())
 prediction <- predict(logistic_model, type = "response")
 prediction <- ifelse (prediction > 0.5, "Affordable", "Unaffordable")
 prediction <- as.factor(prediction)
-table(prediction, train$affordabilitty)
-mean(prediction != train$affordabilitty)
-
-prediction
-train$affordabilitty
+table(prediction, train_r_3$affordabilitty)
+mean(prediction != train_r_3$affordabilitty)
 ```
