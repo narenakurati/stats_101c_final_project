@@ -10,34 +10,53 @@ library(dplyr)
 
 #read in the data
 train <- read.csv("HTrainLast.csv")
+test <- read.csv("HTestLastNoY.csv")
 
 #find out which predictors have the most NAs
 tb1 <- as.data.frame(colSums(is.na(train)))
 tb1 <- setNames(cbind(rownames(tb1), tb1, row.names = NULL), c("predictor", "na_count"))
 tb1 %>% group_by(predictor) %>% arrange(desc(na_count))
 
-#remove troublesome predictors
+#remove troublesome predictors with most NAs
 trouble <- c("PoolQC", "MiscFeature", "Alley", "Fence", "FireplaceQu", "LotFrontage")
 train_r <- subset(train, select = -which(names(train) %in% trouble))
+test_r <- subset(test, select = -which(names(train) %in% trouble))
 
 #check NAs again
 tb2 <- as.data.frame(colSums(is.na(train_r)))
 tb2 <- setNames(cbind(rownames(tb2), tb2, row.names = NULL), c("predictor", "na_count"))
 tb2 %>% group_by(predictor) %>% arrange(desc(na_count))
 
+tb3 <- as.data.frame(colSums(is.na(test_r)))
+tb3 <- setNames(cbind(rownames(tb3), tb3, row.names = NULL), c("predictor", "na_count"))
+tb3 %>% group_by(predictor) %>% arrange(desc(na_count))
+
+#drop first column in both train and test
+train_r <- train_r[,2:75]
+test_r <- test_r[,2:74]
+
+#feature selection
+correlationMatrix <- cor(train_r)
+
+
 #omit remaining NAs
 train_r_2 <- na.omit(train_r)
 #going from 3500 to 3205 observations
 
-#dropping ariables with less than 2 levels
-train_r_3 <- train_r_2[, sapply(train_r_2, function(col) length(unique(col))) > 1]
-#dropped one predictor
+#dealing with NAs in test data
 
-#trying logistic regression
+#dropping variables with less than 2 levels
+train_r_3 <- train_r_2[, sapply(train_r_2, function(col) length(unique(col))) > 1] #drops utility
+
+#drop the first column for numbering in both train and test
+
+#logistic regression
 logistic_model <- glm(formula = affordabilitty ~ ., data = train_r_3, family = binomial())
 prediction <- predict(logistic_model, type = "response")
-prediction <- ifelse (prediction > 0.5, "Affordable", "Unaffordable")
+prediction <- ifelse (prediction < 0.5, "Unaffordable", "Affordable")
 prediction <- as.factor(prediction)
 table(prediction, train_r_3$affordabilitty)
 mean(prediction != train_r_3$affordabilitty)
+
+#test_predict <- predict(logistic_model, test, type = "response")
 ```

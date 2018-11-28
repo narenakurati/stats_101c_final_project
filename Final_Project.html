@@ -140,6 +140,7 @@ $(document).ready(function () {
 ##     intersect, setdiff, setequal, union</code></pre>
 <pre class="r"><code>#read in the data
 train &lt;- read.csv(&quot;HTrainLast.csv&quot;)
+test &lt;- read.csv(&quot;HTestLastNoY.csv&quot;)
 
 #find out which predictors have the most NAs
 tb1 &lt;- as.data.frame(colSums(is.na(train)))
@@ -163,6 +164,7 @@ tb1 %&gt;% group_by(predictor) %&gt;% arrange(desc(na_count))</code></pre>
 <pre class="r"><code>#remove troublesome predictors
 trouble &lt;- c(&quot;PoolQC&quot;, &quot;MiscFeature&quot;, &quot;Alley&quot;, &quot;Fence&quot;, &quot;FireplaceQu&quot;, &quot;LotFrontage&quot;)
 train_r &lt;- subset(train, select = -which(names(train) %in% trouble))
+test_r &lt;- subset(test, select = -which(names(train) %in% trouble))
 
 #check NAs again
 tb2 &lt;- as.data.frame(colSums(is.na(train_r)))
@@ -183,19 +185,38 @@ tb2 %&gt;% group_by(predictor) %&gt;% arrange(desc(na_count))</code></pre>
 ##  9 BsmtFinType2      100
 ## 10 BsmtFinType1       99
 ## # ... with 65 more rows</code></pre>
+<pre class="r"><code>tb3 &lt;- as.data.frame(colSums(is.na(test_r)))
+tb3 &lt;- setNames(cbind(rownames(tb3), tb3, row.names = NULL), c(&quot;predictor&quot;, &quot;na_count&quot;))
+tb3 %&gt;% group_by(predictor) %&gt;% arrange(desc(na_count))</code></pre>
+<pre><code>## # A tibble: 74 x 2
+## # Groups:   predictor [74]
+##    predictor    na_count
+##    &lt;fct&gt;           &lt;dbl&gt;
+##  1 GarageYrBlt        91
+##  2 GarageFinish       91
+##  3 GarageQual         91
+##  4 GarageCond         91
+##  5 GarageType         90
+##  6 BsmtQual           38
+##  7 BsmtExposure       36
+##  8 BsmtCond           35
+##  9 BsmtFinType1       35
+## 10 BsmtFinType2       35
+## # ... with 64 more rows</code></pre>
 <pre class="r"><code>#omit remaining NAs
 train_r_2 &lt;- na.omit(train_r)
 #going from 3500 to 3205 observations
 
-#dropping ariables with less than 2 levels
-train_r_3 &lt;- train_r_2[, sapply(train_r_2, function(col) length(unique(col))) &gt; 1]
-#dropped one predictor
+#deadling with NAs in test data
 
-#trying logistic regression
+#dropping variables with less than 2 levels
+train_r_3 &lt;- train_r_2[, sapply(train_r_2, function(col) length(unique(col))) &gt; 1]
+
+#logistic regression
 logistic_model &lt;- glm(formula = affordabilitty ~ ., data = train_r_3, family = binomial())</code></pre>
 <pre><code>## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred</code></pre>
 <pre class="r"><code>prediction &lt;- predict(logistic_model, type = &quot;response&quot;)
-prediction &lt;- ifelse (prediction &gt; 0.5, &quot;Affordable&quot;, &quot;Unaffordable&quot;)
+prediction &lt;- ifelse (prediction &lt; 0.5, &quot;Unaffordable&quot;, &quot;Affordable&quot;)
 prediction &lt;- as.factor(prediction)
 table(prediction, train_r_3$affordabilitty)</code></pre>
 <pre><code>##               
@@ -204,6 +225,7 @@ table(prediction, train_r_3$affordabilitty)</code></pre>
 ##   Unaffordable       1470           31</code></pre>
 <pre class="r"><code>mean(prediction != train_r_3$affordabilitty)</code></pre>
 <pre><code>## [1] 0.9787832</code></pre>
+<pre class="r"><code>#test_predict &lt;- predict(logistic_model, test, type = &quot;response&quot;)</code></pre>
 
 
 
