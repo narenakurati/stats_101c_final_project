@@ -7,6 +7,7 @@ output: html_document
 
 ```{r}
 library(dplyr)
+library(xgboost)
 
 #read in the data
 train <- read.csv("HTrainLast.csv")
@@ -35,20 +36,21 @@ tb3 %>% group_by(predictor) %>% arrange(desc(na_count))
 train_r <- train_r[,2:75]
 test_r <- test_r[,2:74]
 
-#feature selection
-correlationMatrix <- cor(train_r)
+#dropping variables with less than 2 levels
+#train_r <- train_r[, sapply(train_r, function(col) length(unique(col))) > 1] #drops utility
+myvars <- names(train_r) %in% c("Utilities")
+train_r <- train_r[!myvars]
 
+myvars <-names(test_r) %in% c("Utilities")
+test_r <- test_r[!myvars]
+
+##########################################################################
 
 #omit remaining NAs
 train_r_2 <- na.omit(train_r)
 #going from 3500 to 3205 observations
 
 #dealing with NAs in test data
-
-#dropping variables with less than 2 levels
-train_r_3 <- train_r_2[, sapply(train_r_2, function(col) length(unique(col))) > 1] #drops utility
-
-#drop the first column for numbering in both train and test
 
 #logistic regression
 logistic_model <- glm(formula = affordabilitty ~ ., data = train_r_3, family = binomial())
