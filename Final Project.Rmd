@@ -6,9 +6,26 @@ output: html_document
 ---
 
 ```{r}
-library(dplyr)
+library(testthat)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(gridExtra))
+library(class)
+library(ISLR)
+suppressPackageStartupMessages(library(caret))
+library(e1071)
+suppressPackageStartupMessages(library(MASS))
+library(reshape2)
+library(ggcorrplot)
+suppressPackageStartupMessages(library(boot))
+suppressPackageStartupMessages(library(resample))
+library(rpart)
+library(tree)
+suppressPackageStartupMessages(library(randomForest))
 library(xgboost)
+```
 
+```{r}
 #read in the data
 train <- read.csv("HTrainLast.csv")
 test <- read.csv("HTestLastNoY.csv")
@@ -43,9 +60,27 @@ train_r <- train_r[!myvars]
 
 myvars <-names(test_r) %in% c("Utilities")
 test_r <- test_r[!myvars]
+```
 
-##########################################################################
+```{r}
+#investigating remaining variables
+#out of 73 variables, 38 are categorical
+class <- sapply(train_r, class)
+#length(class)
+#length(which(class == "factor"))
 
+class <- as.data.frame(class)
+class
+which(class == "factor")
+
+length(train_r$LotArea[train_r$LotArea < quantile(train_r$LotArea)[4][[1]]])
+
+plot(train_r$YearRemodAdd ~ train_r$affordabilitty)
+
+plot(train_r$LotArea[train_r$LotArea < quantile(train_r$LotArea)[4][[1]]] ~ train_r$affordabilitty[which(train_r$LotArea < quantile(train_r$LotArea)[4][[1]])])
+```
+
+```{r}
 #omit remaining NAs
 train_r_2 <- na.omit(train_r)
 #going from 3500 to 3205 observations
