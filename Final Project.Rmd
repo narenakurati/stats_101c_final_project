@@ -96,6 +96,8 @@ plot(train_r$ExterCond ~ train_r$affordabilitty)
 
 #Best Subset Selection
 ```{r}
+regfit.full = regsubsets(affordabilitty ~., train_r, really.big=TRUE, method="exhaustive")
+train_r$affordabilitty
 
 ```
 
