@@ -23,6 +23,7 @@ library(rpart)
 library(tree)
 suppressPackageStartupMessages(library(randomForest))
 library(xgboost)
+library(leaps)
 ```
 
 ```{r}
@@ -72,12 +73,30 @@ class <- sapply(train_r, class)
 class <- as.data.frame(class)
 class
 which(class == "factor")
+class[which(class$class == "integer"),]
 
 length(train_r$LotArea[train_r$LotArea < quantile(train_r$LotArea)[4][[1]]])
 
 plot(train_r$YearRemodAdd ~ train_r$affordabilitty)
 
 plot(train_r$LotArea[train_r$LotArea < quantile(train_r$LotArea)[4][[1]]] ~ train_r$affordabilitty[which(train_r$LotArea < quantile(train_r$LotArea)[4][[1]])])
+
+plot(train_r$LotShape ~ train_r$affordabilitty)
+
+plot(train_r$Neighborhood ~ train_r$affordabilitty)
+
+plot(train_r$OverallQual ~ train_r$affordabilitty)
+
+plot(train_r$OverallCond ~ train_r$affordabilitty)
+
+plot(train_r$HouseStyle ~ train_r$affordabilitty)
+
+plot(train_r$ExterCond ~ train_r$affordabilitty)
+```
+
+#Best Subset Selection
+```{r}
+
 ```
 
 ```{r}
