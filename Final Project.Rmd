@@ -24,8 +24,10 @@ library(tree)
 suppressPackageStartupMessages(library(randomForest))
 library(xgboost)
 library(leaps)
+library(missForest)
 ```
 
+##INITAL STUFF
 ```{r}
 #read in the data
 train <- read.csv("HTrainLast.csv")
@@ -61,18 +63,92 @@ train_r <- train_r[!myvars]
 
 myvars <-names(test_r) %in% c("Utilities")
 test_r <- test_r[!myvars]
+
+##Renaming X1stFlrSF and X2ndFlrSF
+names(train_r)[40] <- "FirstFlrSF"
+names(train_r)[41] <- "SecondFlrSF"
+names(test_r)[40] <- "FirstFlrSF"
+names(test_r)[41] <- "SecondFlrSF"
 ```
 
+##Cleaning on the top variables
 ```{r}
-#investigating remaining variables
+train_r_dup <- train_r
+test_r_dup <- test_r
+
+#subsetting to top variables
+gucci <- c(rownames(importance_data_sort[c(1:20),]), "affordabilitty", "YearRemodAdd", "SaleType")
+gucci <- gucci[-19]
+
+train_r_dup <- subset(train_r_dup, select = which(names(train_r_dup) %in% gucci))
+test_r_dup <- subset(test_r_dup, select = which(names(test_r_dup) %in% gucci))
+
+na_check <- as.data.frame(colSums(is.na(train_r_dup)))
+na_check <- setNames(cbind(rownames(na_check), na_check, row.names = NULL), c("predictor", "na_count"))
+na_check %>% group_by(predictor) %>% arrange(desc(na_count))
+```
+
+#Parameter tuning randomforest
+```{r}
+sample <- sample(1:3500, 2450, replace = F)
+mytrain <- train_r_dup[sample,]
+mytest <- train_r_dup[-sample,]
+
+rfm <- randomForest(factor(affordabilitty) ~ ., data = mytrain, method = "class", importance = TRUE, na.action=na.omit)
+
+#test_r_dup$Exterior1st <- factor(test_r_dup$Exterior1st, levels = levels(train_r_dup$Exterior1st))
+
+prediction <- predict(rfm, mytest, na.action=na.omit)
+
+#confusion matrix for testing
+table(prediction, mytest$affordabilitty)
+mean(prediction == mytest$affordabilitty)
+
+
+##WITH CARET
+#control <- trainControl(method="repeatedcv", number=10, repeats=3)
+rfmc<- train(factor(affordabilitty) ~ ., data = mytrain, method = "rf", na.action = na.omit)
+print(rfmc)
+```
+
+##XGBOOST
+```{r}
+mytrain_xg <- mytrain
+mytrain_xg$affordabilitty <- ifelse()
+xgm <- xgboost(data = mytrain, label = mytrain$affordabilitty, max.depth = 2)
+
+```
+
+#ACTUAL
+```{r}
+rfm <- randomForest(factor(affordabilitty) ~ ., data = train_r_dup, method = "class", importance = TRUE, na.action=na.omit)
+
+test_r_dup$Exterior1st <- factor(test_r_dup$Exterior1st, levels = levels(train_r_dup$Exterior1st))
+
+prediction <- predict(rfm, test_r_dup, na.action=na.omit)
+prediction
+
+output <- data.frame("Ob" = c(1:1500), "affordabilitty" = prediction)
+rownames(output) <- c()
+write.csv(output, file = "narenprediction.csv")
+
+#confusion matrix for testing
+table(prediction, train_r_dup$affordabilitty)
+mean(prediction == train_r_dup$affordabilitty)
+```
+
+#Investigating remaining variables
+```{r}
+
 #out of 73 variables, 38 are categorical
 class <- sapply(train_r, class)
 #length(class)
 #length(which(class == "factor"))
 
 class <- as.data.frame(class)
-class
-which(class == "factor")
+class <- setNames(cbind(rownames(class), class, row.names = NULL), 
+         c("var_name", "class"))
+
 class[which(class$class == "integer"),]
 
 length(train_r$LotArea[train_r$LotArea < quantile(train_r$LotArea)[4][[1]]])
@@ -92,29 +168,173 @@ plot(train_r$OverallCond ~ train_r$affordabilitty)
 plot(train_r$HouseStyle ~ train_r$affordabilitty)
 
 plot(train_r$ExterCond ~ train_r$affordabilitty)
+
+plot(train_r$ScreenPorch ~ train_r$affordabilitty)
+
+plot(train_r$TotalBsmtSF ~ train_r$affordabilitty)
+
+plot(train_r$GrLivArea ~ train_r$affordabilitty)
+
+plot(train_r$Bedroom ~ train_r$affordabilitty)
+
+plot(train_r$X1stFlrSF ~ train_r$affordabilitty)
+
+plot(train_r$FullBath ~ train_r$affordabilitty)
+
+plot(train_r$TotRmsAbvGrd ~ train_r$affordabilitty)
+
+plot(train_r$GarageType ~ train_r$affordabilitty)
+
+plot(train_r$PoolArea ~ train_r$affordabilitty)
+```
+
+##Model with hand selected variables
+```{r}
+##SPLITTING TRAIN INTO FURTHER TRAIN AND TEST
+sample <- sample(1:3500, 2450, replace = F)
+train_r_r <- train_r[sample,]
+test_r_r <- train_r[-sample,]
+
+##ADDING IN ONLY GUCCI VARIABLES
+# gucci <- c("LotShape", "HouseStyle", "OverallQual", "OverallCond", "YearBuilt", "YearRemodAdd", "MasVnrArea", "BsmtQual", "TotalBsmtSF", "FirstFlrSF", "GrLivArea", "FullBath", "TotRmsAbvGrd", "GarageType", "GarageCars", "GarageArea", "SaleType", "affordabilitty")
+# train_r_r <- subset(train_r_r, select = which(names(train_r_r) %in% gucci))
+# 
+# check_na <- as.data.frame(colSums(is.na(train_r_r)))
+# check_na <- setNames(cbind(rownames(check_na), check_na, row.names = NULL), c("predictor", "na_count"))
+# check_na %>% group_by(predictor) %>% arrange(desc(na_count))
+# 
+# #leaving out garagetype, bsmt qual and masvnrarea
+# gucci <- c("LotShape", "HouseStyle", "OverallQual", "OverallCond", "YearBuilt", "YearRemodAdd", "TotalBsmtSF", "FirstFlrSF", "GrLivArea", "FullBath", "TotRmsAbvGrd", "GarageCars", "GarageArea", "SaleType", "affordabilitty")
+# train_r_r <- subset(train_r_r, select = which(names(train_r_r) %in% gucci))
+# 
+# random_forest_first <- randomForest(factor(affordabilitty) ~ ., data = train_r_r, method = "class", importance = TRUE, na.action = na.omit)
+# 
+# prediction <- predict(random_forest_first, test_r_r)
+# 
+# #confusion matrix for testing
+# table(prediction, test_r_r$affordabilitty)
+# mean(prediction == test_r_r$affordabilitty)
+
+##IMPUTING THE DATA
+which(is.na(train_r_r$affordabilitty) == TRUE)
+train_r_r <- train_r_r[-c(968, 1768),]
+
+train_r_r_impute <- missForest(train_r_r)
+train_r_r_impute <- train_r_r_impute$ximp
+
+test_r_r_impute <- missForest(test_r_r)
+test_r_r_impute <- test_r_r_impute$ximp
+
+# train_r_r_impute <- rfImpute(affordabilitty ~ ., train_r_r)
+# test_r_r_impute <- rfImpute(YearRemodAdd ~ ., test_r_r)
+
+##RANDOM FOREST ON ALL DATA
+random_forest_second <- randomForest(factor(affordabilitty) ~ ., data = train_r_r_impute, method = "class", importance = TRUE)
+
+prediction <- predict(random_forest_second, test_r_r_impute, na.action=na.omit)
+which(is.na(prediction) == TRUE)
+
+#confusion matrix for testing
+table(prediction, test_r_r_impute$affordabilitty)
+mean(prediction == test_r_r_impute$affordabilitty)
+
+importance(random_forest_second)
+varImpPlot(random_forest_second)
+
+importance_data <- as.data.frame(importance(random_forest_second))
+importance_data_sort <- importance_data[order(-importance_data$MeanDecreaseAccuracy),]
+importance_data_sort[c(1:20),]
+
+gini_data <- importance_data[order(-importance_data$MeanDecreaseGini),]
+gini_data[c(1:20),]
+
+#rownames(gini_data[c(1:20),])
+
+plot(importance_data_sort[c(1:20),]$MeanDecreaseAccuracy ~ gini_data[c(1:20),]$MeanDecreaseGini)
+
+##RANDOM FOREST USE SPECIFIC VARS
+# random_forest_third <- randomForest(factor(affordabilitty) ~ OverallQual + GrLivArea + YearBuilt + YearRemodAdd + TotalBsmtSF + GarageCars + I(GrLivArea)^5 + BsmtExposure + H, data = train_r_r_impute, method = "class", importance = TRUE)
+
+gucci <- c("LotShape", "HouseStyle", "OverallQual", "OverallCond", "YearBuilt", "YearRemodAdd", "TotalBsmtSF", "FirstFlrSF", "GrLivArea", "FullBath", "TotRmsAbvGrd", "GarageCars", "GarageArea", "SaleType", "affordabilitty", "GrLivArea", "TotalBsmtSF", "BsmtExposure")
+train_r_r_impute_third_subset <- subset(train_r_r_impute, select = which(names(train_r_r_impute) %in% gucci))
+
+random_forest_third <- randomForest(factor(affordabilitty) ~ ., data = train_r_r_impute_third_subset, method = "class", importance = TRUE)
+
+prediction <- predict(random_forest_third, test_r_r_impute, na.action=na.omit)
+
+#confusion matrix for testing
+table(prediction, test_r_r_impute$affordabilitty)
+mean(prediction == test_r_r_impute$affordabilitty)
+
+
+##LOGISTIC WITH SPECIFIC VARS
+logistic_gucci <- glm(formula = affordabilitty ~ ., data = train_r_r_impute_third_subset, family = binomial())
+
+prediction <- predict(logistic_gucci, test_r_r_impute, na.action=na.omit)
+prediction <- ifelse (prediction > 0.5, "Unaffordable", "Affordable")
+
+#confusion matrix for testing
+table(prediction, test_r_r_impute$affordabilitty)
+mean(prediction == test_r_r_impute$affordabilitty)
+
+##RANDOM FOREST USE TOP IMPORTANCE VAR
+gucci <- rownames(importance_data_sort[c(1:20),])
+train_r_r_impute_fourth_subset <- subset(train_r_r_impute, select = which(names(train_r_r_impute) %in% gucci))
+train_r_r_impute_fourth_subset$affordabilitty <- train_r_r_impute$affordabilitty
+random_forest_fourth <- randomForest(factor(affordabilitty) ~ ., data = train_r_r_impute_fourth_subset, method = "class", importance = TRUE)
+prediction <- predict(random_forest_fourth, test_r_r_impute, na.action=na.omit)
+#confusion matrix for testing
+table(prediction, test_r_r_impute$affordabilitty)
+mean(prediction == test_r_r_impute$affordabilitty)
+```
+
+##Model with only numerical variables  
+```{r}
+numerical <- class[which(class$class == "integer"),]$var_name
+numerical_paste <- paste(numerical, collaps="+")
+
+numerical_vars <- names(train_r) %in% numerical
+numerical_train_r <- train_r[numerical_vars]
+
+numerical_vars <- names(numerical_train_r) %in% c("MSSubClass", "LotArea", "ScreenPorch")
+numerical_train_r <- numerical_train_r[!numerical_vars]
+
+numerical_train_r$affordabilitty <- train_r$affordabilitty
+
+#SPLITTING DATA INTO TRAINING AND TESTING
+
+
+# regfit.full <- regsubsets(affordabilitty ~., numerical_train_r, method="backward")
+# 
+# regfit.full <- regsubsets(affordabilitty ~., numerical_train_r)
+
+#TREE MODEL
+numerical_tree <- tree(affordabilitty ~ ., data = numerical_train_r, method = "class")
+plot(numerical_tree, margin=0.2); text(numerical_tree, cex=.6)
+
+##RANDOM FOREST
+#randomForest(affordabilitty~.,data=nu,importance=TRUE)
 ```
 
 #Best Subset Selection
 ```{r}
-regfit.full = regsubsets(affordabilitty ~., train_r, really.big=TRUE, method="exhaustive")
-train_r$affordabilitty
-
+#regfit.full = regsubsets(affordabilitty ~., train_r, really.big=TRUE, method="exhaustive")
 ```
 
 ```{r}
-#omit remaining NAs
-train_r_2 <- na.omit(train_r)
-#going from 3500 to 3205 observations
-
-#dealing with NAs in test data
-
-#logistic regression
-logistic_model <- glm(formula = affordabilitty ~ ., data = train_r_3, family = binomial())
-prediction <- predict(logistic_model, type = "response")
-prediction <- ifelse (prediction < 0.5, "Unaffordable", "Affordable")
-prediction <- as.factor(prediction)
-table(prediction, train_r_3$affordabilitty)
-mean(prediction != train_r_3$affordabilitty)
-
-#test_predict <- predict(logistic_model, test, type = "response")
+# #omit remaining NAs
+# train_r_2 <- na.omit(train_r)
+# #going from 3500 to 3205 observations
+# 
+# #dealing with NAs in test data
+# 
+# #logistic regression
+# logistic_model <- glm(formula = affordabilitty ~ ., data = train_r_3, family = binomial())
+# prediction <- predict(logistic_model, type = "response")
+# prediction <- ifelse (prediction < 0.5, "Unaffordable", "Affordable")
+# prediction <- as.factor(prediction)
+# table(prediction, train_r_3$affordabilitty)
+# mean(prediction != train_r_3$affordabilitty)
+# 
+# #test_predict <- predict(logistic_model, test, type = "response")
 ```
