@@ -1,0 +1,143 @@
+```{r}
+library(class)
+library(tree)
+library(MASS)
+library(randomForest)
+set<-read.csv("HTrainLast.csv")
+tset<-read.csv("HTestLastNoY.csv")
+
+set1<-set[,c(-1,-6,-7,-10,-22,-37,-58,-73,-74,-75)]
+tset1<-tset[,c(-6,-7,-10,-37,-22,-58,-73,-74,-75)]
+```
+
+```{r}
+set2<-na.omit(set1)
+model1<-randomForest(affordabilitty~.,data=set2,importance=TRUE)
+result<-predict(model1,type = "class")
+table(result,set2$affordabilitty)
+(1272 + 1347)/(1272 + 1347 + 36 + 27)
+```
+
+##COME BACK TO THIS
+```{r}
+importance(model3)
+```
+
+```{r}
+attach(set)
+new5<-data.frame(MSSubClass,MSZoning,LotArea,LotShape,LotConfig,Neighborhood,Condition1,BldgType,HouseStyle,OverallQual,OverallCond,YearBuilt,YearRemodAdd,Exterior1st,Exterior2nd,MasVnrType,MasVnrArea ,ExterQual,Foundation,BsmtQual,BsmtExposure,BsmtFinType1,BsmtFinSF1,BsmtFinType2,BsmtUnfSF,TotalBsmtSF,X1stFlrSF,X2ndFlrSF,BsmtFullBath,FullBath ,HalfBath,BedroomAbvGr,KitchenQual,TotRmsAbvGrd,Fireplaces,GarageType,GarageYrBlt,GarageFinish,GarageCars,GarageArea,WoodDeckSF ,OpenPorchSF ,ScreenPorch,MoSold,YrSold ,SaleCondition,GrLivArea,affordabilitty)
+detach(set)
+new6<-na.omit(new5)
+```
+
+
+
+
+
+
+```{r}
+
+model2<-randomForest(affordabilitty~.,data=new6,mtry=7,importance=TRUE)
+result1<-predict(model2,type = "class")
+table(result1,new6$affordabilitty)
+```
+
+```{r}
+for(i in 1:48){
+  num<-which(is.na(new5[,i]))
+  num
+  print(num)
+}
+```
+
+```{r}
+num<-which(is.na(new5[,38]))
+num
+```
+
+
+```{r}
+new7<-new5[,c(-16,-17,-20,-21,-22,-24,-36,-37,-38)]
+new8<-na.omit(new7)
+```
+
+```{r}
+model3<-randomForest(affordabilitty~.,data=new8,mtry=7,importance=TRUE)
+result2<-predict(model3,type = "class")
+table(result2,new8$affordabilitty)
+```
+
+```{r}
+attach(tset)
+tnew5<-data.frame(MSSubClass,MSZoning,LotArea,LotShape,LotConfig,Neighborhood,Condition1,BldgType,HouseStyle,OverallQual,OverallCond,YearBuilt,YearRemodAdd,Exterior1st,Exterior2nd,MasVnrType,MasVnrArea ,ExterQual,Foundation,BsmtQual,BsmtExposure,BsmtFinType1,BsmtFinSF1,BsmtFinType2,BsmtUnfSF,TotalBsmtSF,X1stFlrSF,X2ndFlrSF,BsmtFullBath,FullBath ,HalfBath,BedroomAbvGr,KitchenQual,TotRmsAbvGrd,Fireplaces,GarageType,GarageYrBlt,GarageFinish,GarageCars,GarageArea,WoodDeckSF ,OpenPorchSF ,ScreenPorch,MoSold,YrSold ,SaleCondition,GrLivArea, Ob)
+detach(tset)
+```
+
+```{r}
+tnew7<-tnew5[,c(-16,-17,-20,-21,-22,-24,-36,-37,-38)]
+tnew8<-na.omit(tnew7)
+```
+
+```{r}
+data1<-rbind(new8[,-39],tnew8[,-39])
+fnum<-1:3490
+afford<-new8$affordabilitty
+model4<-randomForest(afford~.,data=data1[fnum,],mtry=6,importance=TRUE)
+result4<-predict(model4,type = "class")
+table(result4,new8$affordabilitty)
+```
+
+```{r}
+importance(model4)
+library(ggplot2)
+
+importance_data <- as.data.frame(importance(model4))
+importance_data_sort <- importance_data[order(-importance_data$MeanDecreaseAccuracy),]
+importance_data_sort <- importance_data_sort[c(1:9),]
+gg_importance <- data.frame("var" = rownames(importance_data_sort), "mda" = importance_data_sort$MeanDecreaseAccuracy)
+
+gg_importance
+
+ggplot(gg_importance, aes(x = var, y = mda)) + geom_bar(stat = "identity") + labs(x = "variable name", y = "mean decrease accuracy") + ggtitle("Top 9 Importance Variables")
+
+ggplot(errors, aes(x = factor(type), y = error, fill=predictors)) + geom_bar(stat = "identity", position = "dodge") + scale_fill_discrete(name = "predictors") + ggtitle("Error Rate by Classification Method") + labs(x = "classification type", y = "error rate")
+```
+
+```{r}
+new13<-new7[,c(3,6,10,18,19,20,21,35,38,39)]
+new14<-na.omit(new13)
+tnew13<-tnew7[,c(3,6,10,18,19,20,21,35,38,39)]
+tnew14<-na.omit(tnew13)
+```
+
+```{r}
+model13<-randomForest(affordabilitty~.,data=new14,mtry=6,importance=TRUE)
+result2<-predict(model13,type = "class")
+table(result2,new14$affordabilitty)
+```
+```{r}
+data2<-rbind(new14[,-10],tnew14[,-10])
+tnum<-1:3498
+afford<-new14$affordabilitty
+model8<-randomForest(afford~.,data=data2[tnum,],mtry=3,importance=TRUE)
+resultf<-predict(model8,type = "class")
+table(resultf,new14$affordabilitty)
+
+```
+```{r}
+resultft<-predict(model8,data2[-tnum,],type="class")
+length(resultft)
+```
+```{r}
+numtian<-tnew14$Ob
+t16<-rep(0,1500)
+t16[numtian]<-as.character(resultft)
+t16[-numtian]<-as.character(t7[-numtian])
+table(t16,t7)
+write.csv(t16,'t18.csv')
+```
+
+
+
+
+
