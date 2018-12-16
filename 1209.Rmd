@@ -98,9 +98,11 @@ gg_importance <- data.frame("var" = rownames(importance_data_sort), "mda" = impo
 
 gg_importance
 
-ggplot(gg_importance, aes(x = var, y = mda)) + geom_bar(stat = "identity") + labs(x = "variable name", y = "mean decrease accuracy") + ggtitle("Top 9 Importance Variables")
+library(svglite)
 
-ggplot(errors, aes(x = factor(type), y = error, fill=predictors)) + geom_bar(stat = "identity", position = "dodge") + scale_fill_discrete(name = "predictors") + ggtitle("Error Rate by Classification Method") + labs(x = "classification type", y = "error rate")
+plot1 <- ggplot(gg_importance, aes(x = var, y = mda)) + geom_bar(stat = "identity") + labs(x = "variable name", y = "mean decrease accuracy") + ggtitle("Top 9 Importance Variables")
+
+ggsave(filename = "plot1.svg", plot=plot1)
 ```
 
 ```{r}
